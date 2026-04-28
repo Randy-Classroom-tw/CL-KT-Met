@@ -1,580 +1,485 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kitchen Operations Optimization</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Urbanist:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-/* 1. THE SETUP & CORE THEME (Dark Executive Consultant - Icon Version) */
-* {
-  box-sizing: border-box;
-}
+<meta charset="UTF-8">
+<title>內廚工時統計 · 老闆儀表板</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif;
+    transition: background .4s, color .4s;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-body {
-  background-color: #111;
-  display: grid;
-  gap: 20px;
-  grid-template-columns: 1fr;
-  margin: 0;
-  min-height: 100vh;
-  padding: 20px 0;
-  place-items: center;
-  font-family: 'Urbanist', 'Noto Sans TC', sans-serif;
-}
+  .container { max-width: 1400px; margin: 0 auto; padding: 60px 40px; }
 
-.slide-container {
-  background-color: #1e1e1e;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  height: 720px;
-  justify-content: center;
-  overflow: hidden;
-  padding: 60px;
-  position: relative;
-  width: 1280px;
-}
+  header { margin-bottom: 48px; }
+  h1 { font-size: 38px; font-weight: 300; letter-spacing: 4px; margin-bottom: 12px; }
+  .subtitle { font-size: 14px; opacity: .55; letter-spacing: 2px; }
+  .divider { width: 60px; height: 2px; margin-top: 18px; }
 
-/* Background Accents */
-.slide-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -20%;
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, rgba(217, 249, 157, 0.03) 0%, rgba(30, 30, 30, 0) 70%);
-  z-index: 0;
-}
+  section { margin-bottom: 56px; }
+  .section-title {
+    font-size: 20px; font-weight: 400; letter-spacing: 3px;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+  }
+  .section-title::before {
+    content: ""; display: inline-block; width: 4px; height: 18px;
+  }
 
-.slide-container > * {
-  position: relative;
-  z-index: 1;
-}
+  /* 雙欄正職 / 兼職對比 */
+  .vs-panel {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; margin-bottom: 40px;
+  }
+  .vs-card {
+    padding: 32px; border-radius: 18px;
+    border: 1px solid; position: relative; overflow: hidden;
+  }
+  .vs-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .vs-card.ft::before { background: linear-gradient(90deg, #5cb3e8, #80c8f0); }
+  .vs-card.pt::before { background: linear-gradient(90deg, #e8b35c, #f0c878); }
+  .vs-tag { font-size: 13px; letter-spacing: 3px; opacity: .6; margin-bottom: 6px; }
+  .vs-name { font-size: 22px; font-weight: 500; margin-bottom: 16px; }
+  .vs-big { font-size: 36px; font-weight: 300; letter-spacing: 1px; margin-bottom: 8px; }
+  .vs-sub { font-size: 13px; opacity: .55; margin-bottom: 20px; }
+  .vs-list { list-style: none; padding: 0; }
+  .vs-list li {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 8px; align-items: center;
+    padding: 10px 0; font-size: 13px;
+    border-bottom: 1px dashed rgba(127,127,127,.15);
+  }
+  .vs-list li.head {
+    font-size: 11px; opacity: .5; letter-spacing: 1px;
+    padding: 6px 0; border-bottom: 1px solid rgba(127,127,127,.2);
+  }
+  .vs-list li:last-child { border-bottom: none; }
+  .vs-list li.sum {
+    font-weight: 500; opacity: 1;
+    border-top: 1px solid rgba(127,127,127,.2);
+    border-bottom: none; margin-top: 4px; padding-top: 12px;
+  }
+  .vs-list .nm { opacity: .85; }
+  .vs-list .hr { font-variant-numeric: tabular-nums; opacity: .9; white-space: nowrap; text-align: right; font-size: 12px; }
+  .vs-list .hr.ot { color: #ff8b6b; }
+  .vs-list .hr.zero { opacity: .25; }
+  .vs-list .hr.tot { font-weight: 500; }
+  .vs-note { font-size: 11px; opacity: .45; margin-top: 12px; font-style: italic; }
 
-/* 2. TYPOGRAPHY */
-h1, h2, h3, h4 {
-  color: #fff;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
+  /* 主要統計卡 */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 40px;
+  }
+  .stat-card {
+    padding: 24px 28px; border-radius: 14px;
+    border: 1px solid; transition: transform .3s, border-color .3s;
+  }
+  .stat-card:hover { transform: translateY(-3px); }
+  .stat-label { font-size: 12px; opacity: .55; letter-spacing: 2px; margin-bottom: 10px; }
+  .stat-value { font-size: 24px; font-weight: 300; letter-spacing: 1px; }
+  .stat-sub { font-size: 11px; opacity: .4; margin-top: 6px; }
 
-h1 { font-size: 64px; line-height: 1.1; }
-h2 { font-size: 48px; margin-bottom: 40px; color: #d9f99d; /* Lime Accent */ }
-h3 { font-size: 28px; font-weight: 600; color: #fff; margin-bottom: 16px; }
+  /* 月份分頁 */
+  .month-tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    border-bottom: 1px solid rgba(127,127,127,.2);
+    overflow-x: auto;
+  }
+  .month-tabs button {
+    padding: 12px 22px; border: none; background: transparent;
+    color: inherit; cursor: pointer; opacity: .5;
+    font-size: 14px; letter-spacing: 1px; font-weight: 400;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: all .25s;
+  }
+  .month-tabs button.active { opacity: 1; }
 
-p, li, td, th {
-  color: #a3a3a3;
-  font-size: 20px;
-  line-height: 1.6;
-}
+  .mini-totals {
+    display: flex; gap: 24px; margin-bottom: 16px;
+    padding: 12px 16px; border-radius: 10px;
+    background: rgba(127,127,127,.06); font-size: 13px;
+  }
+  .mini-totals span { opacity: .85; }
+  .mini-totals strong { font-weight: 500; }
 
-/* 3. LAYOUT UTILITIES */
-.content-area {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  justify-content: center;
-  width: 100%;
-}
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead tr { border-bottom: 1px solid rgba(127,127,127,.25); }
+  th {
+    text-align: left; padding: 14px 16px; font-weight: 500;
+    font-size: 12px; letter-spacing: 2px; opacity: .65;
+  }
+  td { padding: 16px; border-bottom: 1px solid rgba(127,127,127,.08); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 4px;
+    font-size: 11px; letter-spacing: 1px; font-weight: 500;
+  }
+  .badge.ft { background: rgba(64,140,200,.15); color: #5cb3e8; border: 1px solid rgba(64,140,200,.3); }
+  .badge.pt { background: rgba(200,140,64,.15); color: #e8b35c; border: 1px solid rgba(200,140,64,.3); }
+  .ot-pos { color: #ff8b6b; font-weight: 500; }
+  .ot-zero { opacity: .3; }
+  tr.total-row { background: rgba(127,127,127,.05); font-weight: 500; }
+  tr.total-row td { border-bottom: none; padding-top: 18px; }
+  tr.group-row td {
+    background: rgba(127,127,127,.04); font-weight: 500;
+    font-size: 13px; letter-spacing: 2px; opacity: .8;
+    padding: 10px 16px; border-bottom: none;
+  }
 
-.two-column {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
-  height: 100%;
-}
+  /* 條狀圖 */
+  .bar-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+  .bar-name {
+    width: 200px; flex: 0 0 200px;
+    font-size: 13px;
+    display: flex; gap: 10px; align-items: center;
+    white-space: nowrap; overflow: hidden;
+  }
+  .bar-name > * { flex: 0 0 auto; white-space: nowrap; }
+  .bar-name .nm-text { font-size: 14px; }
+  .bar-name .nm-note { opacity: .5; font-size: 11px; }
+  .bar-track { flex: 1; height: 28px; border-radius: 4px; position: relative; overflow: hidden; background: rgba(127,127,127,.08); }
+  .bar-base { height: 100%; position: absolute; left: 0; top: 0; }
+  .bar-ot { height: 100%; position: absolute; top: 0; }
+  .bar-value { width: 200px; text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .bar-row.pt .bar-base { opacity: .85; }
+  .bar-legend {
+    display: flex; gap: 24px; margin-bottom: 16px;
+    font-size: 12px; opacity: .65;
+  }
+  .bar-legend span { display: flex; align-items: center; gap: 6px; }
+  .bar-legend i.dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .bar-legend i.dot.base-ft { background: linear-gradient(90deg, #4a8ec0, #6ba8d8); }
+  .bar-legend i.dot.base-pt { background: linear-gradient(90deg, #b08850, #d0a868); }
+  .bar-legend i.dot.ot { background: linear-gradient(90deg, #b07050, #d08560); }
 
-/* 4. ICON & COMPONENT STYLES */
+  .hidden { display: none !important; }
 
-/* Icon Containers (Replacing Images) */
-.icon-graphic-container {
-  background: linear-gradient(145deg, #2a2a2a, #222);
-  border: 1px solid #333;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  min-height: 400px;
-  position: relative;
-  overflow: hidden;
-}
+  /* ============ 鐵灰 ============ */
+  body.theme-iron {
+    background: linear-gradient(135deg, #1a1d23 0%, #2d3139 100%);
+    color: #d4d8de;
+  }
+  .theme-iron .divider { background: linear-gradient(90deg, #6b7180, transparent); }
+  .theme-iron .section-title::before { background: #8b95a8; }
+  .theme-iron .section-title { color: #e8ecf2; }
+  .theme-iron .stat-card,
+  .theme-iron .vs-card { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); }
+  .theme-iron .stat-card:hover { border-color: rgba(255,255,255,.18); }
+  .theme-iron .vs-card.ft { border-color: rgba(92,179,232,.3); }
+  .theme-iron .vs-card.pt { border-color: rgba(232,179,92,.3); }
+  .theme-iron .stat-value, .theme-iron .vs-big { color: #f0f3f8; }
+  .theme-iron .month-tabs button.active { color: #e8ecf2; border-bottom-color: #8b95a8; }
+  .theme-iron tr:hover td { background: rgba(255,255,255,.03); }
+  .theme-iron .bar-base { background: linear-gradient(90deg, #4a8ec0, #6ba8d8); }
+  .theme-iron .bar-ot { background: linear-gradient(90deg, #b07050, #d08560); }
+  .theme-iron .bar-row.pt .bar-base { background: linear-gradient(90deg, #b08850, #d0a868); }
 
-.icon-graphic-container i {
-  font-size: 150px;
-  color: #d9f99d;
-  opacity: 0.9;
-  filter: drop-shadow(0 10px 20px rgba(217, 249, 157, 0.2));
-}
 
-.icon-graphic-container::after {
-  content: '';
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%);
-}
-
-/* Tiles */
-.tiled-content {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 30px;
-  width: 100%;
-}
-
-.tile {
-  background: #2a2a2a;
-  padding: 30px;
-  border-left: 4px solid #d9f99d;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.2s ease;
-}
-
-.tile .icon {
-  font-size: 32px;
-  color: #d9f99d;
-  margin-bottom: 20px;
-}
-
-/* Lists */
-ul { list-style: none; padding: 0; }
-li { margin-bottom: 15px; padding-left: 25px; position: relative; }
-li::before { content: '▹'; color: #d9f99d; position: absolute; left: 0; }
-
-/* Table */
-.table-layout { width: 100%; margin-top: 20px; }
-table { width: 100%; border-collapse: collapse; font-size: 18px; }
-th { text-align: left; padding: 15px; border-bottom: 2px solid #d9f99d; color: #fff; text-transform: uppercase; font-size: 16px; }
-td { padding: 15px; border-bottom: 1px solid #333; color: #ccc; }
-.status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
-.status-training { background-color: #facc15; }
-.status-qualified { background-color: #d9f99d; }
-.status-expert { background-color: #3b82f6; }
-
-/* Highlighted Numbers */
-.highlight-numbers-layout {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-  text-align: center;
-}
-.number-item {
-    background: #252525;
-    padding: 40px;
-    border-radius: 12px;
-    border: 1px solid #333;
-}
-.number-item .number {
-  font-size: 60px;
-  color: #d9f99d;
-  margin-bottom: 20px;
-}
-.number-item .label { font-size: 22px; color: #fff; font-weight: 600; }
-
-/* Timeline Styles (New for Slide 9) */
-.timeline-container {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    margin-top: 20px;
-}
-.timeline-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 30px;
-    position: relative;
-}
-.timeline-marker {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 80px;
-}
-.timeline-circle {
-    width: 20px;
-    height: 20px;
-    background: #d9f99d;
-    border-radius: 50%;
-    margin-top: 5px;
-    box-shadow: 0 0 10px #d9f99d;
-}
-.timeline-line {
-    width: 2px;
-    height: 100%;
-    background: #333;
-    margin-top: 10px;
-    min-height: 80px;
-}
-.timeline-item:last-child .timeline-line {
-    display: none;
-}
-.timeline-content {
-    background: #252525;
-    padding: 25px;
-    border-radius: 8px;
-    width: 100%;
-    border-left: 2px solid #d9f99d;
-}
-.timeline-phase {
-    color: #d9f99d;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 5px;
-}
-
-    </style>
+  @media (max-width: 768px) {
+    .container { padding: 80px 20px 40px; }
+    h1 { font-size: 26px; }
+    .vs-panel { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    th, td { padding: 10px 8px; font-size: 12px; }
+    .bar-value { width: 140px; font-size: 11px; }
+    .mini-totals { flex-direction: column; gap: 6px; }
+  }
+</style>
 </head>
-<body>
+<body class="theme-iron">
 
-<!-- Slide 1: Title_Slide -->
-<div class="slide-container" id="slide1">
-    <div class="content-area">
-        <h1>廚房營運<br>優化與整頓計畫</h1>
-        <hr style="border: 0; height: 1px; background: #333; margin: 40px 0; width: 100%;">
-        <div style="display: flex; gap: 40px; align-items: center;">
-            <i class="fa-solid fa-utensils" style="font-size: 40px; color: #555;"></i>
-            <div>
-                <p style="font-size: 24px; color: #fff; margin-bottom: 5px;">內廚作業效率與標準化提案</p>
-            </div>
-        </div>
+<div class="container">
+
+  <header>
+    <h1>內 廚 工 時 統 計</h1>
+    <div class="subtitle">2025年11月 — 2026年3月 ｜ 正職 vs 兼職人力分配</div>
+    <div class="divider"></div>
+  </header>
+
+  <!-- ===== 老闆視角：正職 vs 兼職 ===== -->
+  <section>
+    <div class="section-title">正職 ｜ 兼職 對比</div>
+    <div class="vs-panel">
+
+      <div class="vs-card ft">
+        <div class="vs-tag">FULL TIME</div>
+        <div class="vs-name">正職組</div>
+        <div class="vs-big">3,764 小時</div>
+        <div class="vs-sub">原始 3,200 小時 ＋ 加班 564 小時 ｜ 共 5 人</div>
+        <ul class="vs-list">
+          <li class="head"><span>同仁</span><span class="hr">原始</span><span class="hr">加班</span><span class="hr">合計</span></li>
+          <li><span class="nm">高聖閔</span><span class="hr">800 小時</span><span class="hr ot">+170 小時</span><span class="hr tot">970 小時</span></li>
+          <li><span class="nm">黃蘊崇</span><span class="hr">800 小時</span><span class="hr ot">+159 小時</span><span class="hr tot">959 小時</span></li>
+          <li><span class="nm">林約翰</span><span class="hr">800 小時</span><span class="hr ot">+88 小時 30 分</span><span class="hr tot">888 小時 30 分</span></li>
+          <li><span class="nm">林寶寶 <small style="opacity:.5">11-2月</small></span><span class="hr">640 小時</span><span class="hr ot">+131 小時</span><span class="hr tot">771 小時</span></li>
+          <li><span class="nm">林奕勳 <small style="opacity:.5">僅 11月</small></span><span class="hr">160 小時</span><span class="hr ot">+15 小時 30 分</span><span class="hr tot">175 小時 30 分</span></li>
+          <li class="sum"><span class="nm">小　計</span><span class="hr">3,200 小時</span><span class="hr ot">+564 小時</span><span class="hr tot">3,764 小時</span></li>
+        </ul>
+        <div class="vs-note">林寶寶 3月起轉為兼職</div>
+      </div>
+
+      <div class="vs-card pt">
+        <div class="vs-tag">PART TIME</div>
+        <div class="vs-name">兼職組</div>
+        <div class="vs-big">1,382 小時</div>
+        <div class="vs-sub">原始 1,195 小時 ＋ 加班 187 小時 ｜ 共 6 人次</div>
+        <ul class="vs-list">
+          <li class="head"><span>同仁</span><span class="hr">原始</span><span class="hr">加班</span><span class="hr">合計</span></li>
+          <li><span class="nm">李佳怡</span><span class="hr">561 小時 31 分</span><span class="hr ot">+112 小時 30 分</span><span class="hr tot">674 小時 1 分</span></li>
+          <li><span class="nm">王金玲</span><span class="hr">409 小時 30 分</span><span class="hr ot">+45 小時 30 分</span><span class="hr tot">455 小時</span></li>
+          <li><span class="nm">吳聿泳 <small style="opacity:.5">2-3月</small></span><span class="hr">130 小時 29 分</span><span class="hr ot">+14 小時 30 分</span><span class="hr tot">144 小時 59 分</span></li>
+          <li><span class="nm">林寶寶 <small style="opacity:.5">僅 3月</small></span><span class="hr">72 小時</span><span class="hr ot">+14 小時 30 分</span><span class="hr tot">86 小時 30 分</span></li>
+          <li><span class="nm">賴橙毅 <small style="opacity:.5">僅 2月</small></span><span class="hr">15 小時</span><span class="hr zero">無加班</span><span class="hr tot">15 小時</span></li>
+          <li><span class="nm">黃千豪 <small style="opacity:.5">僅 11月</small></span><span class="hr">6 小時 30 分</span><span class="hr zero">無加班</span><span class="hr tot">6 小時 30 分</span></li>
+          <li class="sum"><span class="nm">小　計</span><span class="hr">1,195 小時</span><span class="hr ot">+187 小時</span><span class="hr tot">1,382 小時</span></li>
+        </ul>
+        <div class="vs-note">含林寶寶 3月轉兼職部分</div>
+      </div>
+
     </div>
+  </section>
+
+  <!-- ===== 整體總覽 ===== -->
+  <section>
+    <div class="section-title">整體總覽</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">原始工時</div>
+        <div class="stat-value">4,395 小時</div>
+        <div class="stat-sub">不含加班部分</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">加班工時</div>
+        <div class="stat-value">751 小時</div>
+        <div class="stat-sub">五個月加班合計</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">總工時（原始＋加班）</div>
+        <div class="stat-value">5,146 小時</div>
+        <div class="stat-sub">最終合計</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">正職占比</div>
+        <div class="stat-value">73 %</div>
+        <div class="stat-sub">正職 3,764 ｜ 兼職 1,382</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 月度明細 ===== -->
+  <section>
+    <div class="section-title">月度明細</div>
+    <div class="month-tabs">
+      <button data-month="m11" class="active">2025年 11月</button>
+      <button data-month="m12">2025年 12月</button>
+      <button data-month="m01">2026年 1月</button>
+      <button data-month="m02">2026年 2月</button>
+      <button data-month="m03">2026年 3月</button>
+    </div>
+
+    <!-- 11月 -->
+    <div class="month-panel" id="m11">
+      <div class="mini-totals">
+        <span>正職組：<strong>946 小時 30 分鐘</strong>（5 人）</span>
+        <span>兼職組：<strong>230 小時 31 分鐘</strong>（3 人）</span>
+        <span>當月合計：<strong>1,177 小時 1 分鐘</strong></span>
+      </div>
+      <table>
+        <thead><tr><th>同仁</th><th>身份</th><th>原始工時</th><th>加班</th><th>合計</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">正 職</td></tr>
+          <tr><td>林奕勳</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+15 小時 30 分鐘</td><td class="num">175 小時 30 分鐘</td></tr>
+          <tr><td>林約翰</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+34 小時 30 分鐘</td><td class="num">194 小時 30 分鐘</td></tr>
+          <tr><td>高聖閔</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+38 小時</td><td class="num">198 小時</td></tr>
+          <tr><td>林寶寶</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+30 小時</td><td class="num">190 小時</td></tr>
+          <tr><td>黃蘊崇</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+28 小時 30 分鐘</td><td class="num">188 小時 30 分鐘</td></tr>
+          <tr class="group-row"><td colspan="5">兼 職</td></tr>
+          <tr><td>王金玲</td><td><span class="badge pt">兼職</span></td><td class="num">77 小時 30 分鐘</td><td class="num ot-pos">+8 小時</td><td class="num">85 小時 30 分鐘</td></tr>
+          <tr><td>黃千豪</td><td><span class="badge pt">兼職</span></td><td class="num">6 小時 30 分鐘</td><td class="num ot-zero">無加班</td><td class="num">6 小時 30 分鐘</td></tr>
+          <tr><td>李佳怡</td><td><span class="badge pt">兼職</span></td><td class="num">115 小時 1 分鐘</td><td class="num ot-pos">+23 小時 30 分鐘</td><td class="num">138 小時 31 分鐘</td></tr>
+          <tr class="total-row"><td colspan="2">11月小計</td><td class="num">999 小時 1 分鐘</td><td class="num">+178 小時</td><td class="num">1,177 小時 1 分鐘</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 12月 -->
+    <div class="month-panel hidden" id="m12">
+      <div class="mini-totals">
+        <span>正職組：<strong>777 小時 30 分鐘</strong>（4 人）</span>
+        <span>兼職組：<strong>280 小時 30 分鐘</strong>（2 人）</span>
+        <span>當月合計：<strong>1,058 小時</strong></span>
+      </div>
+      <table>
+        <thead><tr><th>同仁</th><th>身份</th><th>原始工時</th><th>加班</th><th>合計</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">正 職</td></tr>
+          <tr><td>高聖閔</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+40 小時 30 分鐘</td><td class="num">200 小時 30 分鐘</td></tr>
+          <tr><td>林約翰</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+16 小時</td><td class="num">176 小時</td></tr>
+          <tr><td>林寶寶</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+41 小時 30 分鐘</td><td class="num">201 小時 30 分鐘</td></tr>
+          <tr><td>黃蘊崇</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+39 小時 30 分鐘</td><td class="num">199 小時 30 分鐘</td></tr>
+          <tr class="group-row"><td colspan="5">兼 職</td></tr>
+          <tr><td>王金玲</td><td><span class="badge pt">兼職</span></td><td class="num">109 小時</td><td class="num ot-pos">+18 小時</td><td class="num">127 小時</td></tr>
+          <tr><td>李佳怡</td><td><span class="badge pt">兼職</span></td><td class="num">128 小時</td><td class="num ot-pos">+25 小時 30 分鐘</td><td class="num">153 小時 30 分鐘</td></tr>
+          <tr class="total-row"><td colspan="2">12月小計</td><td class="num">877 小時</td><td class="num">+181 小時</td><td class="num">1,058 小時</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 1月 -->
+    <div class="month-panel hidden" id="m01">
+      <div class="mini-totals">
+        <span>正職組：<strong>777 小時 30 分鐘</strong>（4 人）</span>
+        <span>兼職組：<strong>232 小時</strong>（2 人）</span>
+        <span>當月合計：<strong>1,009 小時 30 分鐘</strong></span>
+      </div>
+      <table>
+        <thead><tr><th>同仁</th><th>身份</th><th>原始工時</th><th>加班</th><th>合計</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">正 職</td></tr>
+          <tr><td>高聖閔</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+40 小時 30 分鐘</td><td class="num">200 小時 30 分鐘</td></tr>
+          <tr><td>林約翰</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+16 小時</td><td class="num">176 小時</td></tr>
+          <tr><td>林寶寶</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+41 小時 30 分鐘</td><td class="num">201 小時 30 分鐘</td></tr>
+          <tr><td>黃蘊崇</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+39 小時 30 分鐘</td><td class="num">199 小時 30 分鐘</td></tr>
+          <tr class="group-row"><td colspan="5">兼 職</td></tr>
+          <tr><td>王金玲</td><td><span class="badge pt">兼職</span></td><td class="num">120 小時</td><td class="num ot-zero">無加班</td><td class="num">120 小時</td></tr>
+          <tr><td>李佳怡</td><td><span class="badge pt">兼職</span></td><td class="num">112 小時</td><td class="num ot-zero">無加班</td><td class="num">112 小時</td></tr>
+          <tr class="total-row"><td colspan="2">1月小計</td><td class="num">872 小時</td><td class="num">+137 小時 30 分鐘</td><td class="num">1,009 小時 30 分鐘</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2月 -->
+    <div class="month-panel hidden" id="m02">
+      <div class="mini-totals">
+        <span>正職組：<strong>712 小時 30 分鐘</strong>（4 人）</span>
+        <span>兼職組：<strong>274 小時 42 分鐘</strong>（4 人）</span>
+        <span>當月合計：<strong>987 小時 12 分鐘</strong></span>
+      </div>
+      <table>
+        <thead><tr><th>同仁</th><th>身份</th><th>原始工時</th><th>加班</th><th>合計</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">正 職</td></tr>
+          <tr><td>高聖閔</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+20 小時 30 分鐘</td><td class="num">180 小時 30 分鐘</td></tr>
+          <tr><td>林約翰</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+11 小時 30 分鐘</td><td class="num">171 小時 30 分鐘</td></tr>
+          <tr><td>林寶寶</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+18 小時</td><td class="num">178 小時</td></tr>
+          <tr><td>黃蘊崇</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+22 小時 30 分鐘</td><td class="num">182 小時 30 分鐘</td></tr>
+          <tr class="group-row"><td colspan="5">兼 職</td></tr>
+          <tr><td>王金玲</td><td><span class="badge pt">兼職</span></td><td class="num">48 小時</td><td class="num ot-pos">+12 小時</td><td class="num">60 小時</td></tr>
+          <tr><td>李佳怡</td><td><span class="badge pt">兼職</span></td><td class="num">102 小時 30 分鐘</td><td class="num ot-pos">+41 小時 30 分鐘</td><td class="num">144 小時</td></tr>
+          <tr><td>賴橙毅</td><td><span class="badge pt">兼職</span></td><td class="num">15 小時</td><td class="num ot-zero">無加班</td><td class="num">15 小時</td></tr>
+          <tr><td>吳聿泳</td><td><span class="badge pt">兼職</span></td><td class="num">47 小時 42 分鐘</td><td class="num ot-pos">+8 小時</td><td class="num">55 小時 42 分鐘</td></tr>
+          <tr class="total-row"><td colspan="2">2月小計</td><td class="num">853 小時 12 分鐘</td><td class="num">+134 小時</td><td class="num">987 小時 12 分鐘</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3月 -->
+    <div class="month-panel hidden" id="m03">
+      <div class="mini-totals">
+        <span>正職組：<strong>550 小時</strong>（3 人）</span>
+        <span>兼職組：<strong>364 小時 17 分鐘</strong>（4 人）</span>
+        <span>當月合計：<strong>914 小時 17 分鐘</strong></span>
+      </div>
+      <table>
+        <thead><tr><th>同仁</th><th>身份</th><th>原始工時</th><th>加班</th><th>合計</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">正 職</td></tr>
+          <tr><td>高聖閔</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+30 小時 30 分鐘</td><td class="num">190 小時 30 分鐘</td></tr>
+          <tr><td>林約翰</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+10 小時 30 分鐘</td><td class="num">170 小時 30 分鐘</td></tr>
+          <tr><td>黃蘊崇</td><td><span class="badge ft">正職</span></td><td class="num">160 小時</td><td class="num ot-pos">+29 小時</td><td class="num">189 小時</td></tr>
+          <tr class="group-row"><td colspan="5">兼 職</td></tr>
+          <tr><td>王金玲</td><td><span class="badge pt">兼職</span></td><td class="num">55 小時</td><td class="num ot-pos">+7 小時 30 分鐘</td><td class="num">62 小時 30 分鐘</td></tr>
+          <tr><td>李佳怡</td><td><span class="badge pt">兼職</span></td><td class="num">104 小時</td><td class="num ot-pos">+22 小時</td><td class="num">126 小時</td></tr>
+          <tr><td>吳聿泳</td><td><span class="badge pt">兼職</span></td><td class="num">82 小時 47 分鐘</td><td class="num ot-pos">+6 小時 30 分鐘</td><td class="num">89 小時 17 分鐘</td></tr>
+          <tr><td>林寶寶</td><td><span class="badge pt">兼職</span></td><td class="num">72 小時</td><td class="num ot-pos">+14 小時 30 分鐘</td><td class="num">86 小時 30 分鐘</td></tr>
+          <tr class="total-row"><td colspan="2">3月小計</td><td class="num">793 小時 47 分鐘</td><td class="num">+120 小時 30 分鐘</td><td class="num">914 小時 17 分鐘</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== 視覺化 ===== -->
+  <section>
+    <div class="section-title">人力分配視覺化（五個月累計）</div>
+    <div class="bar-legend">
+      <span><i class="dot base-ft"></i>正職原始工時</span>
+      <span><i class="dot base-pt"></i>兼職原始工時</span>
+      <span><i class="dot ot"></i>加班工時</span>
+    </div>
+    <div id="bars"></div>
+  </section>
+
 </div>
 
-<!-- Slide 2: Optimization Pillars (Layout: Tiled_Text_With_Icons) -->
-<div class="slide-container" id="slide2">
-    <h2 class="slide-title">優化重點項目 (Pillars)</h2>
-    <div class="content-area">
-        <div class="tiled-content" style="grid-template-columns: repeat(5, 1fr); gap: 15px;">
-            <div class="tile" style="padding: 20px;">
-                <div class="icon"><i class="fa-solid fa-users-gear"></i></div>
-                <h3 style="font-size: 20px;">人員管理</h3>
-                <p style="font-size: 16px;">站區技能矩陣與學習進度可視化。</p>
-            </div>
-            <div class="tile" style="padding: 20px;">
-                <div class="icon"><i class="fa-solid fa-broom"></i></div>
-                <h3 style="font-size: 20px;">衛生清潔</h3>
-                <p style="font-size: 16px;">建立季度與深度清潔的 SOP。</p>
-            </div>
-            <div class="tile" style="padding: 20px;">
-                <div class="icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
-                <h3 style="font-size: 20px;">動線優化</h3>
-                <p style="font-size: 16px;">優化五大作業區動線，提升效率。</p>
-            </div>
-            <div class="tile" style="padding: 20px;">
-                <div class="icon"><i class="fa-solid fa-boxes-stacked"></i></div>
-                <h3 style="font-size: 20px;">庫存管理</h3>
-                <p style="font-size: 16px;">倉庫動線重整與乾貨管理優化。</p>
-            </div>
-            <div class="tile" style="padding: 20px;">
-                <div class="icon"><i class="fa-solid fa-chart-line"></i></div>
-                <h3 style="font-size: 20px;">成本控管</h3>
-                <p style="font-size: 16px;">耗損紀錄與各站區標準化執行。</p>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+  // 月份切換
+  document.querySelectorAll('.month-tabs button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('.month-tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.month-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById(b.dataset.month).classList.remove('hidden');
+    };
+  });
 
-<!-- Slide 3: Personnel Matrix (Layout: Table) -->
-<div class="slide-container" id="slide3">
-    <h2 class="slide-title">內場人員站區考核表 (Skill Matrix)</h2>
-    <div class="content-area">
-        <div class="table-layout">
-            <p style="margin-bottom: 20px; font-size: 16px;">考核狀態： <span class="status-indicator status-expert"></span>精通(Expert) <span class="status-indicator status-qualified"></span>合格(Qualified) <span class="status-indicator status-training"></span>培訓中(Training)</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>姓名 (Name)</th>
-                        <th>菜口區 Pass</th>
-                        <th>擺菜區 Plating</th>
-                        <th>爐台區 Wok</th>
-                        <th>炸台區 Fryer</th>
-                        <th>備料區 Prep</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>高聖閔</strong></td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                    </tr>
-                    <tr>
-                        <td><strong>林約翰</strong></td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                        <td><span class="status-indicator status-training"></span>培訓中</td>
-                        <td>-</td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                    </tr>
-                    <tr>
-                        <td><strong>林寶寶</strong></td>
-                        <td><span class="status-indicator status-training"></span>培訓中</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td><span class="status-indicator status-training"></span>培訓中</td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                    </tr>
-                     <tr>
-                        <td><strong>黃韻崇</strong></td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                        <td><span class="status-indicator status-qualified"></span>合格</td>
-                        <td><span class="status-indicator status-training"></span>培訓中</td>
-                        <td>-</td>
-                        <td>-</td>
-                    </tr>
-                     <tr>
-                        <td><strong>李佳怡</strong></td>
-                        <td>-</td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td><span class="status-indicator status-expert"></span>精通</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+  // 條狀圖（FT 在上 / PT 在下）
+  const ftData = [
+    { name: '高聖閔', base: 800,           ot: 170 },
+    { name: '黃蘊崇', base: 800,           ot: 159 },
+    { name: '林約翰', base: 800,           ot: 88.5 },
+    { name: '林寶寶', base: 640,           ot: 131,    note: '11-2月正職' },
+    { name: '林奕勳', base: 160,           ot: 15.5 },
+  ];
+  const ptData = [
+    { name: '李佳怡', base: 561 + 31/60,   ot: 112.5 },
+    { name: '王金玲', base: 409.5,         ot: 45.5 },
+    { name: '吳聿泳', base: 130 + 29/60,   ot: 14.5 },
+    { name: '林寶寶', base: 72,            ot: 14.5,   note: '3月兼職' },
+    { name: '賴橙毅', base: 15,            ot: 0 },
+    { name: '黃千豪', base: 6.5,           ot: 0 },
+  ];
+  const allData = [...ftData, ...ptData];
+  const max = Math.max(...allData.map(d => d.base + d.ot));
 
-<!-- Slide 4: Deep Cleaning (Layout: Two_Column with Icons) -->
-<div class="slide-container" id="slide4">
-    <h2 class="slide-title">廚房深度清潔計畫 (Cleaning Protocol)</h2>
-    <div class="content-area">
-        <div class="two-column">
-             <!-- Column 1: Text List -->
-            <div>
-                <div class="tile" style="margin-bottom: 20px;">
-                    <h3><i class="fa-solid fa-calendar-check" style="margin-right: 10px;"></i> 季度清潔項目 (Quarterly)</h3>
-                    <ul style="margin-bottom: 0;">
-                        <li><strong>烤箱 (Oven):</strong> 內部積碳徹底清除。</li>
-                        <li><strong>排油煙罩 (Hood):</strong> 濾網與油杯深度清潔。</li>
-                        <li><strong>保溫櫃 (Warmer):</strong> 軌道、門縫與發熱管清潔。</li>
-                    </ul>
-                </div>
-                <div class="tile">
-                    <h3><i class="fa-solid fa-soap" style="margin-right: 10px;"></i> 重點深度清潔 (Deep Clean)</h3>
-                    <ul style="margin-bottom: 0;">
-                        <li><strong>油炸台 (Fryer):</strong> 洩油過濾，加熱管刮除油垢。</li>
-                        <li><strong>五大站區:</strong> 每週死角與地面刷洗(Deck Brushing)。</li>
-                    </ul>
-                </div>
-            </div>
-            <!-- Column 2: Large Graphic Icon -->
-            <div class="icon-graphic-container">
-                <i class="fa-solid fa-pump-soap"></i>
-            </div>
+  const fmt = h => {
+    const total = Math.round(h * 60);
+    const hh = Math.floor(total / 60);
+    const mm = total % 60;
+    if (mm === 0) return `${hh.toLocaleString()} 小時`;
+    return `${hh.toLocaleString()} 小時 ${mm} 分鐘`;
+  };
+  const renderRow = (d, type) => {
+    const total = d.base + d.ot;
+    const basePct = (d.base / max) * 100;
+    const otPct = (d.ot / max) * 100;
+    const noteHtml = d.note ? `<span class="nm-note">${d.note}</span>` : '';
+    return `
+      <div class="bar-row ${type}">
+        <div class="bar-name">
+          <span class="badge ${type}">${type === 'ft' ? '正職' : '兼職'}</span>
+          <span class="nm-text">${d.name}</span>
+          ${noteHtml}
         </div>
-    </div>
-</div>
-
-<!-- Slide 5: Refrigeration (Layout: Tiled_Text_With_Icons) -->
-<div class="slide-container" id="slide5">
-    <h2 class="slide-title">冰箱設備與庫存管理 (Storage)</h2>
-    <div class="content-area">
-        <p style="margin-bottom: 30px;"><strong>月清潔計畫:</strong> 除霜、膠條清潔、內部整理、過期品盤點。</p>
-        <div class="tiled-content" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-door-closed"></i></div>
-                <h3>立式冰箱 (Upright)</h3>
-                <ul>
-                    <li>廚房內四門冰箱</li>
-                    <li>後院三門玻璃冰箱</li>
-                </ul>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-table-columns"></i></div>
-                <h3>工作台冰箱 (Bench)</h3>
-                <ul>
-                    <li>菜口臥式雙門冰箱</li>
-                    <li>廚房雙門透明玻璃</li>
-                </ul>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-icicles"></i></div>
-                <h3>冷凍設備 (Freezer)</h3>
-                <ul>
-                    <li>後院掀蓋式冷凍白冰箱</li>
-                    <li>重點項目：定期除霜保養</li>
-                </ul>
-            </div>
+        <div class="bar-track">
+          <div class="bar-base" style="width:${basePct}%"></div>
+          <div class="bar-ot" style="left:${basePct}%; width:${otPct}%"></div>
         </div>
-    </div>
-</div>
-
-<!-- Slide 6: Workflow Optimization (Layout: Two_Column Icon Focus) -->
-<div class="slide-container" id="slide6">
-    <h2 class="slide-title">動線優化策略 (Workflow)</h2>
-    <div class="content-area">
-        <div class="two-column">
-            <div class="icon-graphic-container" style="background: transparent; border: 2px dashed #444;">
-                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 80%;">
-                    <div style="text-align: center;"><i class="fa-solid fa-fire-burner" style="font-size: 50px; color: #555;"></i><br>爐台區 (Wok)</div>
-                    <div style="text-align: center;"><i class="fa-solid fa-utensils" style="font-size: 50px; color: #555;"></i><br>備料區 (Prep)</div>
-                    <div style="text-align: center;"><i class="fa-solid fa-bell-concierge" style="font-size: 50px; color: #d9f99d;"></i><br>菜口 (Pass)</div>
-                    <div style="text-align: center;"><i class="fa-solid fa-temperature-arrow-up" style="font-size: 50px; color: #555;"></i><br>炸台 (Fryer)</div>
-                 </div>
-            </div>
-            <div>
-                <h3 style="color: #d9f99d;">營運流程改善策略</h3>
-                <p>針對五大區域 (菜口、擺菜、爐台、炸台、備料) 進行器具與動線重整：</p>
-                <div class="tile" style="margin-top: 30px; border-left-color: #facc15;">
-                    <ul style="margin: 0;">
-                        <li style="font-size: 22px; color: #fff;"><strong>黃金區域 (Zone 1):</strong> 高頻率使用物品移至腰部高度。</li>
-                        <li style="font-size: 22px; color: #fff;"><strong>新菜應對 (Scalability):</strong> 預留空間因應未來新菜單。</li>
-                        <li style="font-size: 22px; color: #fff;"><strong>效率目標 (Efficiency):</strong> 減少轉身、彎腰與無效步數。</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Slide 7: Inventory & Labor (Layout: Highlighted_Numbers) -->
-<div class="slide-container" id="slide7">
-    <h2 class="slide-title">營運效率與工時管理 (Ops & Labor)</h2>
-    <div class="content-area">
-        <div class="highlight-numbers-layout" style="grid-template-columns: repeat(4, 1fr); gap: 20px;">
-            <div class="number-item">
-                <div class="number"><i class="fa-solid fa-warehouse"></i></div>
-                <div class="label">Warehouse<br>倉庫整頓完成</div>
-            </div>
-            <div class="number-item">
-                <div class="number"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
-                <div class="label">FIFO Flow<br>先進先出優化</div>
-            </div>
-            <div class="number-item">
-                <div class="number"><i class="fa-solid fa-user-clock"></i></div>
-                <div class="label">Reduce OT<br>降低加班時數</div>
-            </div>
-            <div class="number-item">
-                <div class="number"><i class="fa-solid fa-battery-full"></i></div>
-                <div class="label">Well-being<br>改善人員疲勞</div>
-            </div>
-        </div>
-        <p style="text-align: center; margin-top: 40px; color: #a3a3a3;">
-            透過動線重整與班表優化，同步提升物料管理效率與員工工作滿意度。
-        </p>
-    </div>
-</div>
-
-<!-- Slide 8: Recipe Standardization (Layout: Tiled_Text_With_Icons) -->
-<div class="slide-container" id="slide8">
-    <h2 class="slide-title">標準化作業與食譜重整 (SOP & Recipe)</h2>
-    <div class="content-area">
-        <div class="tiled-content">
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-tablet-screen-button"></i></div>
-                <h3>數位化整合 (Digital)</h3>
-                <p>重整內容，完善表格呈現，便於查閱與即時更新。</p>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-list-check"></i></div>
-                <h3>標準化作業 (Standard)</h3>
-                <p>統一計量單位與操作步驟，確保出品口味一致性。</p>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-camera"></i></div>
-                <h3>視覺化輔助 (Visuals)</h3>
-                <p>增加成品照片與擺盤示意圖，降低新進人員學習門檻。</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Slide 9: Implementation Roadmap (NEW) -->
-<div class="slide-container" id="slide9">
-    <h2 class="slide-title">執行導入時程表 (Implementation Roadmap)</h2>
-    <div class="content-area">
-        <div class="timeline-container">
-            <!-- Phase 1 -->
-            <div class="timeline-item">
-                <div class="timeline-marker">
-                    <div class="timeline-circle"></div>
-                    <div class="timeline-line"></div>
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-phase">Phase 1: Week 1-2</div>
-                    <h3 style="margin: 0 0 10px 0;">觀察與基礎整頓 (Assessment & Setup)</h3>
-                    <p style="margin: 0; font-size: 18px;">現況盤點、倉庫清潔歸位、衛生死角掃除、建立通訊群組與初步共識。</p>
-                </div>
-            </div>
-            <!-- Phase 2 -->
-            <div class="timeline-item">
-                <div class="timeline-marker">
-                    <div class="timeline-circle"></div>
-                    <div class="timeline-line"></div>
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-phase">Phase 2: Week 3-4</div>
-                    <h3 style="margin: 0 0 10px 0;">動線調整與 SOP 導入 (Optimization)</h3>
-                    <p style="margin: 0; font-size: 18px;">五大站區物品定位、Recipe 數位化更新、人員考核表試行。</p>
-                </div>
-            </div>
-            <!-- Phase 3 -->
-            <div class="timeline-item">
-                <div class="timeline-marker">
-                    <div class="timeline-circle"></div>
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-phase">Phase 3: Week 5+</div>
-                    <h3 style="margin: 0 0 10px 0;">驗收與成本監控 (Review & Cost Control)</h3>
-                    <p style="margin: 0; font-size: 18px;">考核驗收、啟動耗損紀錄表、分析工時數據、調整下一季目標。</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Slide 10: Cost Control (NEW) -->
-<div class="slide-container" id="slide10">
-    <h2 class="slide-title">成本優化與耗損控制 (Cost Optimization)</h2>
-    <div class="content-area">
-        <div class="tiled-content">
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-trash-can-arrow-up"></i></div>
-                <h3>耗損紀錄 (Waste Log)</h3>
-                <p>建立「每日報廢表」，區分人為疏失、食材腐壞與試菜耗損，精準抓出浪費源頭。</p>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-scale-balanced"></i></div>
-                <h3>份量控管 (Portion Control)</h3>
-                <p>嚴格執行 Recipe 標準重量，定期抽測出餐份量，確保成本毛利 (COGS) 符合預期。</p>
-            </div>
-            <div class="tile">
-                <div class="icon"><i class="fa-solid fa-bolt"></i></div>
-                <h3>能源與維修 (Maintenance)</h3>
-                <p>落實設備保養 SOP (如冰箱膠條、濾網)，降低設備故障維修費與無效能源浪費。</p>
-            </div>
-        </div>
-        <div style="margin-top: 30px; border: 1px solid #333; padding: 20px; border-radius: 12px; background: #252525;">
-            <h4 style="color: #d9f99d; margin-bottom: 10px;">預期效益 (Expected Outcome):</h4>
-            <p style="margin: 0; font-size: 18px;">透過精準控管，目標在下一季度有效降低各項成本數據，並延長設備使用年限。</p>
-        </div>
-    </div>
-</div>
-
-<!-- Slide 11: Q&A -->
-<div class="slide-container" id="slide11">
-    <div class="content-area" style="text-align: center;">
-        <i class="fa-solid fa-comments" style="font-size: 100px; color: #333; margin-bottom: 30px;"></i>
-        <h2 style="font-size: 80px; margin-bottom: 20px; color: #d9f99d;">Q & A</h2>
-        <p style="font-size: 24px;">感謝您的聆聽與指教。</p>
-        <p style="font-size: 18px; margin-top: 20px; color: #666;">Open for discussion.</p>
-    </div>
-</div>
+        <div class="bar-value">${fmt(total)}</div>
+      </div>`;
+  };
+  const html =
+    '<div style="font-size:13px;opacity:.55;letter-spacing:2px;margin:8px 0 6px">正職組</div>' +
+    ftData.map(d => renderRow(d, 'ft')).join('') +
+    '<div style="font-size:13px;opacity:.55;letter-spacing:2px;margin:24px 0 6px">兼職組</div>' +
+    ptData.map(d => renderRow(d, 'pt')).join('');
+  document.getElementById('bars').innerHTML = html;
+</script>
 
 </body>
 </html>
